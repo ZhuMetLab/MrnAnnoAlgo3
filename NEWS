@@ -1,0 +1,401 @@
+----------------------------------------------------------------------------------------------------
+### version 0.1.3
+1. setup workflow
+2. add redundancy removal functions (same as MetDNA method)
+3. transfer MRN3 data from MetDNA2 to MRN3 package
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.4
+1. add RT prediction functions (same as MetDNA method)
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.5
+1. add Tags2 creation functions "createTags2ForMetDNA" (for MetDNA)
+2. add parameter "is_output" for MS1_data, MS2_data, table_seed_long
+3. assign seed anno. info: adduct, mz, rt, ccs
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.6
+1. modify RT prediction functions "predictRtInMrn3": save data "rt_result" for MetDNA result generation
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.7
+1. (pkg) modify "Imports": change 'tidyverse' to 'dplyr', add 'tidyr', 'SpectraTools', 'tibble', 'stringr'
+2. (pkg) modify 'MetDNA2' to 'MetDNA3' in functions
+3. setup default addcut: 11 pos, 8 neg
+# positive mode (11 adducts, 20240129 temp) (all adducts in MetDNA1 & MetDNA2)
+# "[M+H]+"     "[M+NH4]+"   "[M+Na]+"    "[M-H+2Na]+" "[M+K]+"
+# "[M-H+2K]+"  "[2M+H]+"    "[2M+NH4]+"  "[2M+Na]+"   "[2M+K]+"
+# "[M-H2O+H]+"
+# negative mode (8 adducts, 20240129 temp) (all adducts in MetDNA1 & MetDNA2)
+# "[M-H]-"      "[M+Na-2H]-"  "[M+K-2H]-"   "[M+NH4-2H]-" "[2M-H]-"
+# "[M+CH3COO]-" "[2M+Na-2H]-" "[M-H2O-H]-"
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.8
+1. modify RT prediction functions "predictRtInMrn3": output prediction summary
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.81
+1. Multithreaded matching adduct
+2. add RT prediction functions, be the same with MetDNA2 (is_rt_pred_by_metdna2 = TRUE)
+3. add parameter "lib_type_mrn": "MRN3" or "MRN2"
+4. set "MRN2" step_mrn = 3 for neighbor searching
+# In MS2 similarity network generation ---- (DISCRADED!!!)
+    # step_mrn = 3 in MetDNA2(MRN2)
+    # step_mrn = 1 in MRN3
+    round_mrn <- 1
+    while (round_mrn <= step_mrn) {
+        node_to <- lapply(id_from, function(node_from)
+            names(igraph::neighbors(obj_mrn, node_from))) %>%
+            unlist() %>% sort() %>% unique()
+        if (length(node_to) == 0) return(NULL)
+        table_to <- table_ms2_anno[table_ms2_anno$id %in% node_to, ]
+        feature_to <- unique(table_to$feature_name)
+        feature_to <- feature_to[feature_to != feature_from]
+        if (length(feature_to) == 0) {
+            id_from <- node_to
+            round_mrn <- round_mrn + 1
+        } else {
+            round_mrn <- step_mrn + 1
+        }
+    }
+    if (length(feature_to) == 0) return(NULL)
+    return(data.frame(from = feature_from, to = feature_to))
+# In recursive annotation ----
+    # step_mrn = 3 in MetDNA2(MRN2)
+    # step_mrn = 1 in MRN3
+    round_mrn <- 1
+    while (round_mrn <= step_mrn) {
+        temp_to_id <- lapply(temp_id, function(node_from)
+            names(igraph::neighbors(obj_mrn, node_from))) %>%
+            unlist() %>% sort() %>% unique()
+        # temp_to_id <- names(igraph::neighbors(obj_mrn, temp_id))
+        temp_anno <- temp_anno %>% dplyr::filter(to_id %in% temp_to_id)
+        if (nrow(temp_anno) == 0) {
+            temp_id <- temp_to_id
+            round_mrn <- round_mrn + 1 # next round
+        } else {
+            round_mrn <- step_mrn + 1 # end
+        }
+    }
+    if (nrow(temp_anno) == 0) next
+4. ID conversion and RT prediction are really dumb! ^_^
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.82
+1. be the same with MetDNA2
+2. mz_tol_ms2 <- 25
+3. (MS2 match) # the lib spec always use spec from the peak with smaller mz
+4. table_seed_long: direct to get "id_kegg" from "seedAnno_filename"
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.83
+1. update "step_mrn" setting
+# In MS2 similarity network generation ----
+    # step_mrn = 3 in MetDNA2(MRN2)
+    # step_mrn = 1 in MRN3
+    node_to <- MRN3::getMrnNeighbor(id = id_from, step = step_mrn, graph = obj_mrn)
+    if (length(node_to) == 0) return(NULL)
+    table_to <- table_ms2_anno[table_ms2_anno$id %in% node_to, ]
+    feature_to <- unique(table_to$feature_name)
+    feature_to <- feature_to[feature_to != feature_from]
+    if (length(feature_to) == 0) return(NULL)
+    return(data.frame(from = feature_from, to = feature_to))
+2. table_seed_long: get "id_kegg" from "id_mrn"
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.84
+1. fix bug in recursive annotation: remove all candidates when check 'max_step'; mark error 'id'
+    ### (before)
+    # match ids by from id (MRN guided)
+    # step_mrn = 3 in MetDNA2(MRN2)
+    # step_mrn = 1 in MRN3
+    round_mrn <- 1
+    while (round_mrn <= step_mrn) {
+        temp_to_id <- lapply(temp_id, function(node_from)
+            names(igraph::neighbors(obj_mrn, node_from))) %>%
+            unlist() %>% sort() %>% unique()
+        # temp_to_id <- names(igraph::neighbors(obj_mrn, temp_id))
+        temp_anno <- temp_anno %>% dplyr::filter(to_id %in% temp_to_id)
+        if (nrow(temp_anno) == 0) {
+            temp_id <- temp_to_id
+            round_mrn <- round_mrn + 1 # next round
+        } else {
+            round_mrn <- step_mrn + 1 # end
+        }
+    }
+    if (nrow(temp_anno) == 0) next
+    ### (after)
+    # match ids by from id (MRN guided)
+    # step_mrn = 3 in MetDNA2(MRN2)
+    # step_mrn = 1 in MRN3
+    round_mrn <- 1
+    round_id <- temp_id
+    while (round_mrn <= step_mrn) {
+        temp_to_id <- lapply(round_id, function(node_from)
+            names(igraph::neighbors(obj_mrn, node_from))) %>%
+            unlist() %>% sort() %>% unique()
+        # temp_to_id <- names(igraph::neighbors(obj_mrn, round_id))
+        temp_anno_to_check <- temp_anno %>% dplyr::filter(to_id %in% temp_to_id)
+        if (nrow(temp_anno_to_check) == 0) {
+            round_id <- temp_to_id
+            round_mrn <- round_mrn + 1 # next round
+        } else {
+            round_mrn <- step_mrn + 1 # end
+        }
+    }
+    temp_anno <- temp_anno_to_check
+    if (nrow(temp_anno) == 0) next
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.85
+1. fix bug in add seed annotation when use MRN2
+    ### (after)
+    # some id_keggs are not in MRN2:cpd_emrn, use MRN3::info_mrn search
+    if (lib_type_mrn == 'MRN2') {
+        info_mrn_bak <- info_mrn
+        idx_na_seed <- which(is.na(seed_anno$id))
+        if (length(idx_na_seed) > 0) {
+            load(system.file("info_mrn.rda", package = "MRN3")) # MRN3::info_mrn
+            idx_info <- sapply(table_seed_long$id_mrn[idx_na_seed], function(x) grep(x, info_mrn$id_kegg))
+            seed_anno_add <- dplyr::add_row(
+                empty_anno,
+                'feature_name' = table_seed_long$feature_name[idx_na_seed],
+                'feature_mz' = ms1_data$mz[idx_match_f[idx_na_seed]],
+                'feature_rt' = ms1_data$rt[idx_match_f[idx_na_seed]],
+                'feature_ccs' = ms1_data$ccs[idx_match_f[idx_na_seed]],
+                'id' = table_seed_long$id_mrn[idx_na_seed], # use KEGG ID!
+                'name' = info_mrn$name[idx_info],
+                'formula' = info_mrn$formula[idx_info],
+                'em' = info_mrn$monoisotopic_mass[idx_info],
+                'rt' = ms1_data$rt[idx_match_f[idx_na_seed]], # no data, use feature RT
+                'ccs' = ms1_data$ccs[idx_match_f[idx_na_seed]], # no data, use feature CCS
+                'tag' = 'seed',
+                'seed_round' = 1
+            )
+            seed_anno <- dplyr::bind_rows(seed_anno, seed_anno_add)
+        }
+        # back to info_mrn <- MetDNA3::cpd_emrn (add RT & CCS)
+        info_mrn <- info_mrn_bak
+    }
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.86
+1. fix bug in "getMrnNeighbor"
+    ### (before)
+    sum_ids <- sum_ids[-which(sum_ids == id)]
+    ### (after)
+    if (length(which(sum_ids %in% valid_ids)) > 0) sum_ids <- sum_ids[-which(sum_ids %in% valid_ids)]
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.87
+1. fix bug in m/z calculation
+    ### (after)
+    if (startsWith(adduct, "[2M")) {
+        mrn_adduct_mz <- info_mrn$monoisotopic_mass * 2 + delta_mz
+    } else {
+        mrn_adduct_mz <- info_mrn$monoisotopic_mass + delta_mz
+    }
+2. fix bug in recursive annotation back to seed when use MRN2
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.88
+1. fix bug in m/z calculation
+    temp_M <- regmatches(adduct, regexec("\\[(\\d+)", adduct))[[1]]
+    if (length(temp_M) > 1) {
+        temp_M <- as.numeric(temp_M[2])
+    } else {
+        temp_M <- 1
+    }
+2. fix ms1 m/z tolerance: mz_tol <- 15
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.89
+1. fix bug in recursive annotation: check "idx_f_m_annotated"
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.91
+1. modify in recursive annotation: "idx_f_m_annotated" generation after each 'seed' annotation
+2. fix bug in recursive annotation: unsuccessful removal of "temp_anno_to_check"
+3. fix bug in "getMrnNeighbor": add 'step 0' nodes (input nodes)
+    # MS2 similarity network generation: use all results
+    # Recursive annotation: use 'step > 0' results
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.92
+1. seed ID conversion
+    # MRN2: id_zhulab -> id_kegg
+    # MRN3: id_zhulab -> id_mrn
+2. modify in recursive annotation: "idx_f_m_annotated" generation after each 'round' annotation
+3. setup multi-thread processing of recursive annotation
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.93
+1. same with MetDNA2 in recursive annotation
+    # same with MetDNA2
+    if (lib_type_mrn == 'MRN2' & length(temp_to_id) > 100) temp_to_id <- temp_to_id[1:100]
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.94
+1. add param. "is_only_confidence_assignment" for "rmRedunInMrn3" in "MRN3output.R"
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.95 (same with MetDNA update)
+1. use 'step == round_mrn' neighbors in recursive annotation (MetDNA method)
+    temp_to_id <- temp_to_id$id[temp_to_id$step == round_mrn]
+2. add "adductAnnotationInMrn3" function
+3. check annotated f.-m. pair after neighbor search
+4. add feature_from in recursive annotation table (Feature A - Met. 1 -> Feature A - Met. 2)
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.96 (same with MetDNA update)
+1. modify MS2 match param.
+    thrIntensityAbs = 50
+    thrIntensityRel = 0.01
+2. mz_ppm_thr <- 400
+3. valid adduct checking in recursive annotation (11 pos, 8 neg)
+4. valid rt error checking in recursive annotation (30%)
+5. fix bug: m/z error calculation
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.97 (same with MetDNA update)
+1. RT grouping and confidence assignment only once.
+2. Use "tags2_after_redundancy_remove" for main MetDNA3
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.98 (same with MetDNA update)
+1. 'seed_anno' meta info from 'MetLib::metinfo'
+2. update MRN3 lib: from [M]+ to [M]
+3. MS1 match: mz_ppm_thr <- 0 (Orbitrap)
+4. MS2 match: mz_ppm_thr <- 400 (All)
+5. recalculate RT error for seed (recalculate in seed_anno table generation)
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.99 (same with MetDNA update)
+1. update name of peak group in "rmRedunInMrn3"
+    # temp_res$group <- stringr::str_c(temp_id, "_pg", temp_group)
+    # e.g. "C00025_pg2": C00025 peak group 2 (same as C00025_2 in MetDNA)
+2. update redun. calculation in "calculateRedundancyInMrn3"
+    # redun_id <- length(unique(result_df$group)) / length(uni_id) # MetDNA method (modified)
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.99.11 (same with MetDNA update)
+1. add adduct annotation function for "table_ms1_anno_only" after recursive annotation
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.99.12 (same with MetDNA update)
+1. fix bug in confidence assignment by "RT grouping"
+    # (before) temp_confidence <- stringr::str_extract(names(unlist(rt_class)), 'grade\\d')
+    # (after) temp_confidence <- stringr::str_extract(names(sort(unlist(rt_class))), 'grade\\d')
+    # > unlist(rt_class)
+    # grade41 grade42  grade3  grade3 grade31 grade32  grade3  grade3  grade4
+    #       1       9       2       3       4       7       5       6       8
+    # > sort(unlist(rt_class))
+    # grade41  grade3  grade3 grade31  grade3  grade3 grade32  grade4 grade42
+    #       1       2       3       4       5       6       7       8       9
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.99.13 (same with MetDNA update)
+1. ignore seed "ID" metabolite RT error
+2. check adduct & RT error and filter results in recursive annotation
+3. do not simplify MRN object (cuz 100 limitation in MetDNA)
+
+----------------------------------------------------------------------------------------------------
+### version 0.1.99.14
+1. use MS2 data in "01_result_initial_seed_annotation/00_intermediate_data/ms2"
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.11
+1. peakage name: [MrnAnnoAlgo3] !!!
+2. update new settings for MetDNA3 (new MRN annotation algorithm)
+    # [top10k neighbors]
+    ### if (length(temp_to_id) > 10000) temp_to_id <- sort(temp_to_id)[1:10000]
+    # [8 adducts]
+    ### positive mode (4 adducts, MrnAnnoAlgo3 0.2.11 and later)
+    ### c("[M+H]+", "[M-H2O+H]+", "[M+Na]+", "[M+NH4]+")
+    ### negative mode (4 adducts, MrnAnnoAlgo3 0.2.11 and later)
+    ### c("[M-H]-", "[M-H2O-H]-", "[M+Na-2H]-", "[M+CH3COO]-")
+    # seed exp. RT replace pred. RT
+    ### table_seed_exp_rt <- table_seed_exp_rt[table_seed_exp_rt$id_mrn %in% info_mrn$id, ]
+    ### info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)] <- table_seed_exp_rt$rt
+    # [seed anno. & potential anno. are independent of each other]
+    ### seed table -> seed anno.
+    ### ms1 data + MRN info -> potential anno.
+    ### (when recursive annotation) table = seed anno. + potential anno.
+    # [update 'info_mrn': name modification]
+    ### e.g. L-Glutamate -> Glutamate
+    # adductAnno use id_from MS2 score (in adductAnnotation)
+    # adductAnno use id_from total score (in final adductAnnotation)
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.12
+1. update new settings
+    # [no limited neighbors]
+    ### topN_neighbor = Inf
+    ### if (length(temp_to_id) > topN_neighbor) temp_to_id <- sort(temp_to_id)[1:topN_neighbor]
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.13
+1. update MS2 similarity calculation methods
+    # DP, modified cosine (HSS), spectral entropy
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.14
+1. update new settings [polarity setting]
+    # polarity setting summary
+    #
+    # positive mode (11 adducts, all adducts in MetDNA2)
+    # "[M+H]+"     "[M+NH4]+"   "[M+Na]+"    "[M-H+2Na]+" "[M+K]+"
+    # "[M-H+2K]+"  "[2M+H]+"    "[2M+NH4]+"  "[2M+Na]+"   "[2M+K]+"
+    # "[M-H2O+H]+"
+    # negative mode (8 adducts, all adducts in MetDNA2)
+    # "[M-H]-"      "[M+Na-2H]-"  "[M+K-2H]-"   "[M+NH4-2H]-" "[2M-H]-"
+    # "[M+CH3COO]-" "[2M+Na-2H]-" "[M-H2O-H]-"
+    #
+    # positive mode (3 adducts, 20240131 temp)
+    # c("[M+H]+", "[M-H2O+H]+", "[M+Na]+")
+    # negative mode (3 adducts, 20240131 temp)
+    # c("[M-H]-", "[M-H2O-H]-", "[M+Na-2H]-")
+    #
+    # positive mode (4 adducts, MrnAnnoAlgo3 0.2.11 and later)
+    # c("[M+H]+", "[M-H2O+H]+", "[M+Na]+", "[M+NH4]+")
+    # negative mode (4 adducts, MrnAnnoAlgo3 0.2.11 and later)
+    # c("[M-H]-", "[M-H2O-H]-", "[M+Na-2H]-", "[M+CH3COO]-")
+    #
+    # positive mode (1 adduct for testing)
+    # "[M+H]+"
+    # negative mode (1 adduct for testing)
+    # "[M-H]-"
+2. MRN annotation does not include precursor ions
+    includePrecursor = FALSE
+3. update parameter conversion
+4. 'level' = 'round' = 'seed_round' - 1
+    # seed: level = 0, seed_round = 1
+    # metAnnotation: level 1, seed_round = 2
+    # 'round': annotation round
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.14.1
+1. update with MetDNA3 0.2.23.14.1
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.14.2
+1. fix level of final adductAnnotation results
+    temp_table_ms1_anno_only$level <- max_round
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.14.2.x
+1. set different MRN type for test
+    version 0.2.14.2.2: RGMN (Reaction-guided metabolite network)
+    version 0.2.14.2.3: SGMN (Structure-guided metabolite network)
+    version 0.2.14.2.4: FCMN (Fully-connected metabolite network) # neighbors = all nodes
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.15
+1. update BioTransformer unknowns (BioTransformer 3.0)
+    info_mrn_3x: 771590 = 53583 knowns + 718007 unknowns
+    md_mrn_3x: 771590 = 53583 knowns + 718007 unknowns
+    obj_mrn_3x1: UN-- 175354 1600639 --
+    obj_mrn_3x2: UN-- 765755 2437884 --
+2. update parameter: 'ex_step' to control extension step for BioTransformer unknowns prediction step
