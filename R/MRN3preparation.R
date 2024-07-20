@@ -191,7 +191,7 @@ predictRtInMrn3 <- function(
         dplyr::group_by(id_mrn) %>%
         dplyr::summarize(rt_exp = median(rt_exp, na.rm = T))
     if (nrow(table_exp_rt) == 0) stop("ERROR: No metabolites are identified.\n")
-    if (nrow(table_exp_rt) <= 5) stop("ERROR: <= 5 metabolites are identified.\n")
+    if (nrow(table_exp_rt) < 20) stop("ERROR: < 20 metabolites are identified.\n")
     cat("There are ", nrow(table_exp_rt), " metabolites are used for RT prediction.\n", sep = "")
 
     # MD cleaning
@@ -289,6 +289,26 @@ predictRtInMrn3 <- function(
         file = file.path(wd_output, "rt_result"),
         compress = "xz", version = 2
     )
+    pdf(file.path(wd_output, 'rt_prediction_plot.pdf'), width = 6, height = 6)
+    max_val <- max(c(rt_exp, rt_pred))
+    plot(
+        x = rt_exp,
+        y = rt_pred,
+        xlim = c(0, max_val),
+        ylim = c(0, max_val),
+        main = "RT prediction of seeds",
+        xlab = "Experimental RT (s)",
+        ylab = "Predicted RT (s)",
+        pch = 19, col = "blue"
+    )
+    abline(a = 0, b = 1, lty = 2, col = "red")
+    text(x = max_val * 0.05, y = max_val * 0.9, labels = paste0("R-squared: ", round(r_squared, 4)), pos = 4)
+    text(x = max_val * 0.05, y = max_val * 0.85, labels = paste0("MeanAE: ", round(mae, 2), " s"), pos = 4)
+    text(x = max_val * 0.05, y = max_val * 0.8, labels = paste0("MedianAE: ", round(medae, 2), " s"), pos = 4)
+    text(x = max_val * 0.05, y = max_val * 0.75, labels = paste0("MeanRE: ", round(mre, 2), "%"), pos = 4)
+    text(x = max_val * 0.05, y = max_val * 0.7, labels = paste0("MedianRE: ", round(medre, 2), "%"), pos = 4)
+    text(x = max_val * 0.05, y = max_val * 0.65, labels = paste0("RMSE: ", round(rmse, 2), " s"), pos = 4)
+    dev.off()
 
     return(mrn_rt)
 

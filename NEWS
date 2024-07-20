@@ -399,3 +399,14 @@
     obj_mrn_3x1: UN-- 175354 1600639 --
     obj_mrn_3x2: UN-- 765755 2437884 --
 2. update parameter: 'ex_step' to control extension step for BioTransformer unknowns prediction step
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.21
+1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
+    remove ID metAnnotations which have seed annotations
+    remove redundancy: 1 to N
+    only confidence assignment (same with MetDNA)
+    calculate redundancy (same with MetDNA)
+2. update RT prediction outputs (FUNC: predictRtInMrn3)
+    if (nrow(table_exp_rt) < 20) stop("ERROR: < 20 metabolites are identified.\n")
+    plot(x = rt_pred, y = rt_exp)

@@ -111,7 +111,7 @@ rmRedunInMrn3 <- function(result_df, is_only_confidence_assignment = FALSE) {
     # CHECK POINT! is_only_confidence_assignment ----
     if (is_only_confidence_assignment) return(result_df)
 
-    cat('Redundancy removal.', '\n')
+    cat('Redundancy removal by old MetDNA.', '\n')
     cat('\n')
 
     redun_record <- list()

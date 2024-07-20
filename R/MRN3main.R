@@ -17,6 +17,8 @@
 #' @param is_rt_pred_by_metdna2 TRUE!
 #' @param adduct_for_MRN_anno NULL or limited to some types
 #' @param ms2_sim_method dp or hybrid
+#' @param num_candi number of candidates (topN) for redundancy removal
+#' @param is_known_prioritization priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal
 #'
 #' @return null
 #' @export
@@ -34,15 +36,21 @@ MrnAnnoAlgo <- function(
         ms1_data,
         ms2_data,
         table_seed_long,
+        # experimental settings
         instrument_type = c('Orbitrap', 'TOF'),
         column = c('hilic', 'rp'),
         method_lc = c('Amide12min', 'Amide23min', 'Other', 'MetlinRP', 'RP12min', 'RP12min_v2'),
         polarity = c('positive', 'negative'),
+        # MRN annotation settings
         lib_type_mrn = c('MRN3', 'MRN2'), # MRN2 = KEGG_MRN_ex2 in MetDNA2_function
         ex_step = c('0', '1', '2'), # BioTransformer extension step for unknown
         is_rt_pred_by_metdna2 = TRUE, # RT prediction by MetDNA2_function
         adduct_for_MRN_anno = NULL, # adduct for MS1 annotation
         ms2_sim_method = c('dp', 'hybrid'), # DP or HSS
+        # redundancy removal settings (for MetDNA3, no old MetDNA!)
+        num_candi = 3, # number of candidates
+        is_known_prioritization = T, # priority: level3.1 (knowns) > level3.2 (unknowns)
+        # other settings
         thread = 4
         ) {
 
@@ -150,7 +158,9 @@ MrnAnnoAlgo <- function(
                     load(system.file("info_mrn_3x.rda", package = "MrnAnnoAlgo3")) # info_mrn
                     load(system.file("md_mrn_3x.rda", package = "MrnAnnoAlgo3")) # md_mrn
                     info_mrn <- info_mrn_3x
+                    info_mrn <- info_mrn %>% filter(min_reaction_step <= 1)
                     md_mrn <- md_mrn_3x
+                    md_mrn <- md_mrn[rownames(md_mrn) %in% info_mrn$id, ]
                     obj_mrn <- obj_mrn_3x1
                     rm(list = c('info_mrn_3x', 'md_mrn_3x', 'obj_mrn_3x1')); gc()
                     gc()
@@ -222,14 +232,21 @@ MrnAnnoAlgo <- function(
         }
         info_mrn$rt <- rt_result[[2]]$RT[match(info_mrn$id, rownames(rt_result[[2]]))]
     } else {
-        # MRN3 prediction (simplified)
-        info_mrn$rt <- MrnAnnoAlgo3::predictRtInMrn3(
-            wd = wd,
-            ms1_data = ms1_data,
-            table_seed_long = table_seed_long,
-            md_mrn = md_mrn,
-            column = column
-        )
+        rt_result_path <- file.path(wd, "02_result_MRN_annotation", "00_intermediate_data")
+        dir.create(rt_result_path, showWarnings = F, recursive = T)
+        if (all(c('rt_result') %in% list.files(rt_result_path))) {
+            load(file.path(rt_result_path, 'rt_result'))
+            info_mrn$rt <- rt_result$KEGG.rt$RT
+        } else {
+            # MRN3 prediction (simplified)
+            info_mrn$rt <- MrnAnnoAlgo3::predictRtInMrn3(
+                wd = wd,
+                ms1_data = ms1_data,
+                table_seed_long = table_seed_long,
+                md_mrn = md_mrn,
+                column = column
+            )
+        }
     }
     # info_mrn$rt <- -1
     info_mrn$ccs <- -1
@@ -239,6 +256,10 @@ MrnAnnoAlgo <- function(
         dplyr::group_by(id_mrn) %>%
         summarise(rt = median(rt))
     table_seed_exp_rt <- table_seed_exp_rt[table_seed_exp_rt$id_mrn %in% info_mrn$id, ]
+    plot(
+        x = info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)],
+        y = table_seed_exp_rt$rt
+    )
     info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)] <- table_seed_exp_rt$rt
 
     # get seed annotation with MetLib --------------------------------------------------------------
@@ -292,7 +313,7 @@ MrnAnnoAlgo <- function(
     idx_fix <- which(seed_anno$rt_score < 0)
     if (length(idx_fix) > 0) seed_anno$rt_score[idx_fix] <- 0
     seed_anno$ms2_score <- 1
-    readr::write_csv(seed_anno, file.path(wd_output, 'table_seed_anno.csv'))
+    readr::write_csv(seed_anno, file.path(wd_output, 'table_seed_anno.csv'), na = '')
 
     # simplify MRN object & MS1 data ---------------------------------------------------------------
     cat('Simplify MRN object & MS1 data.', '\n')
@@ -306,7 +327,7 @@ MrnAnnoAlgo <- function(
     } else {
         # search by adducts
         library(parallel)
-        cl <- parallel::makeCluster(thread)
+        cl <- parallel::makeCluster(min(thread, length(adduct_table$adduct)))
         clusterExport(cl, c(
             # 'adduct_table',
             # 'info_mrn',
@@ -369,7 +390,7 @@ MrnAnnoAlgo <- function(
             ccs_tol_rel = ccs_tol_rel
         )
 
-        readr::write_csv(table_ms1_anno, file.path(wd_output, 'table_ms1_anno.csv'))
+        readr::write_csv(table_ms1_anno, file.path(wd_output, 'table_ms1_anno.csv'), na = '')
     }
 
     # get simplified annotation table of features (with MS2)
@@ -407,8 +428,8 @@ MrnAnnoAlgo <- function(
     table_ms1_anno_with_ms2 <- table_ms1_anno[idx_for_anno, ]
     # table_ms1_anno_only <- table_ms1_anno[!(table_ms1_anno$feature_name %in% ms2_name), ]
     table_ms1_anno_only <- table_ms1_anno[-idx_for_anno, ]
-    readr::write_csv(table_ms1_anno_with_ms2, file.path(wd_output, 'table_ms1_anno_with_ms2.csv'))
-    readr::write_csv(table_ms1_anno_only, file.path(wd_output, 'table_ms1_anno_only.csv'))
+    readr::write_csv(table_ms1_anno_with_ms2, file.path(wd_output, 'table_ms1_anno_with_ms2.csv'), na = '')
+    readr::write_csv(table_ms1_anno_only, file.path(wd_output, 'table_ms1_anno_only.csv'), na = '')
 
     cat('Putative annotations:', nrow(table_ms1_anno), '\n')
     cat('Putative annotations (features with MS2, for MRN annotation):', nrow(table_ms1_anno_with_ms2), '\n')
@@ -428,11 +449,11 @@ MrnAnnoAlgo <- function(
 
     # get links of features with MS2 (MS2 network edges) -------------------------------------------
     if ('table_ms2_edges.rda' %in% list.files(wd_output)) {
-        cat('Load MS2 network edges.', '\n')
+        cat('Load MS2 network edges (feature MS2 pairs).', '\n')
         cat('\n')
         load(file.path(wd_output, 'table_ms2_edges.rda'))
     } else {
-        cat('Get MS2 network edges.', '\n')
+        cat('Get MS2 network edges (feature MS2 pairs).', '\n')
 
         library(parallel)
         cl <- parallel::makeCluster(thread)
@@ -481,19 +502,19 @@ MrnAnnoAlgo <- function(
 
     # calculate similarity of MS2 network edges (MS2 pairs) ----------------------------------------
     if ('table_ms2_network.rda' %in% list.files(wd_output)) {
-        cat('Load similarity of MS2 network edges.', '\n')
+        cat('Load similarity of MS2 network edges  (feature MS2 pairs).', '\n')
         cat('\n')
         load(file.path(wd_output, 'table_ms2_network.rda'))
     } else {
-        cat('Calculate similarity of MS2 network edges.', '\n')
+        cat('Calculate similarity of MS2 network edges (feature MS2 pairs).', '\n')
         cat('\n')
         library(parallel)
         cl <- parallel::makeCluster(thread)
         clusterExport(cl, c(
-            # 'table_ms2_edges',
-            # 'ms2_name',
-            # 'ms2_data',
-            # 'matchParam',
+            'table_ms2_edges',
+            'ms2_name',
+            'ms2_data',
+            'matchParam',
             '%>%'
         ), envir = environment())
         tempFunMs2 <- function(x) {
@@ -612,7 +633,7 @@ MrnAnnoAlgo <- function(
 
             # skip isotopc annotation (meaningless)
             # input 'table_mrn_anno' and 'idx_seeds' for adduct search
-            table_mrn_anno <- MrnAnnoAlgo3::getAdductAnno(
+            table_mrn_anno <- getAdductAnno(
                 table_anno = table_mrn_anno,
                 idx_seeds = idx_seeds,
                 round = round,
@@ -622,7 +643,7 @@ MrnAnnoAlgo <- function(
             cat('Metabolite Annotation', '\n')
             cat('\n')
 
-            table_mrn_anno <- MrnAnnoAlgo3::getMetAnno(
+            table_mrn_anno <- getMetAnno(
                 table_anno = table_mrn_anno,
                 idx_seeds = idx_seeds,
                 round = round,
@@ -644,7 +665,7 @@ MrnAnnoAlgo <- function(
 
         }
 
-        readr::write_csv(table_mrn_anno, file.path(wd_output, 'table_mrn_anno.csv'))
+        readr::write_csv(table_mrn_anno, file.path(wd_output, 'table_mrn_anno.csv'), na = '')
 
     }
 
@@ -658,7 +679,7 @@ MrnAnnoAlgo <- function(
     # seed total score is 1
     result_mrn_anno$total_score[which(result_mrn_anno$tag == 'seed')] <- 1
 
-    # add adduct annotation result in table_ms1_anno_only (same with MetDNA)
+    # add adduct annotation result in table_ms1_anno_only (same with MetDNA) -----------------------
     # feature without MS2 should be annotated again
     # method modified by 'getAdductAnno' function
     # filter
@@ -694,15 +715,23 @@ MrnAnnoAlgo <- function(
     # readr::write_csv(table_mrn_anno, file.path(wd_output, 'table_mrn_anno_before_ms1_adduct_anno.csv'))
     result_mrn_anno <- dplyr::bind_rows(result_mrn_anno, table_adduct_anno_only)
     result_mrn_anno <- result_mrn_anno %>% dplyr::arrange(id)
-    readr::write_csv(table_adduct_anno_only, file.path(wd_output, 'table_adduct_anno_only.csv'))
-    readr::write_csv(result_mrn_anno, file.path(wd_output, 'result_mrn_anno.csv'))
+    readr::write_csv(table_adduct_anno_only, file.path(wd_output, 'table_adduct_anno_only.csv'), na = '')
+    readr::write_csv(result_mrn_anno, file.path(wd_output, 'result_mrn_anno_raw.csv'), na = '')
 
     # redundancy removal (MetDNA method) -----------------------------------------------------------
-    result_mrn_anno_with_confidence <- MrnAnnoAlgo3::rmRedunInMrn3(result_df = result_mrn_anno, is_only_confidence_assignment = T)
-    result_mrn_anno_rm_redun <- MrnAnnoAlgo3::rmRedunInMrn3(result_df = result_mrn_anno)
+    # result_mrn_anno_with_confidence <- MrnAnnoAlgo3::rmRedunInMrn3(result_df = result_mrn_anno, is_only_confidence_assignment = T)
+    result_mrn_anno_rm_redun_by_metdna <- MrnAnnoAlgo3::rmRedunInMrn3(result_df = result_mrn_anno)
+    readr::write_csv(result_mrn_anno_rm_redun_by_metdna, file.path(wd_output, 'result_mrn_anno_rm_redun_by_old_metdna.csv'), na = '')
 
-    readr::write_csv(result_mrn_anno_with_confidence, file.path(wd_output, 'result_mrn_anno_with_confidence.csv'))
-    readr::write_csv(result_mrn_anno_rm_redun, file.path(wd_output, 'result_mrn_anno_rm_redun.csv'))
+    # redundancy removal ---------------------------------------------------------------------------
+    result_mrn_anno_rm_redun_by_metdna3 <- MrnAnnoAlgo3::rmRedunInMetdna3(
+        result_df = result_mrn_anno,
+        num_candi = num_candi, # number of candidates
+        is_known_prioritization = is_known_prioritization, # priority: level3.1 (knowns) > level3.2 (unknowns)
+        wd_output = wd_output
+    )
+
+    readr::write_csv(result_mrn_anno_rm_redun_by_metdna3, file.path(wd_output, 'result_mrn_anno_with_confidence.csv'), na = '')
 
     et <- Sys.time()
     et - st

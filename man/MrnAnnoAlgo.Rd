@@ -18,6 +18,8 @@ MrnAnnoAlgo(
   is_rt_pred_by_metdna2 = TRUE,
   adduct_for_MRN_anno = NULL,
   ms2_sim_method = c("dp", "hybrid"),
+  num_candi = 3,
+  is_known_prioritization = T,
   thread = 4
 )
 }
@@ -47,6 +49,10 @@ MrnAnnoAlgo(
 \item{adduct_for_MRN_anno}{NULL or limited to some types}
 
 \item{ms2_sim_method}{dp or hybrid}
+
+\item{num_candi}{number of candidates (topN) for redundancy removal}
+
+\item{is_known_prioritization}{priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal}
 
 \item{thread}{thread (default is 4).}
 }
