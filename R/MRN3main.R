@@ -54,7 +54,10 @@ MrnAnnoAlgo <- function(
         thread = 4
         ) {
 
-    wd_output <- file.path(wd, '02_result_MRN3')
+    library(readr)
+    options(readr.show_col_types = FALSE)
+
+    wd_output <- file.path(wd, '02_result_MRN_annotation')
     dir.create(wd_output, showWarnings = F, recursive = T)
 
     library(dplyr)
@@ -256,10 +259,10 @@ MrnAnnoAlgo <- function(
         dplyr::group_by(id_mrn) %>%
         summarise(rt = median(rt))
     table_seed_exp_rt <- table_seed_exp_rt[table_seed_exp_rt$id_mrn %in% info_mrn$id, ]
-    plot(
-        x = info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)],
-        y = table_seed_exp_rt$rt
-    )
+    # plot(
+    #     x = info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)],
+    #     y = table_seed_exp_rt$rt
+    # )
     info_mrn$rt[match(table_seed_exp_rt$id_mrn, info_mrn$id)] <- table_seed_exp_rt$rt
 
     # get seed annotation with MetLib --------------------------------------------------------------

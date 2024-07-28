@@ -410,3 +410,10 @@
 2. update RT prediction outputs (FUNC: predictRtInMrn3)
     if (nrow(table_exp_rt) < 20) stop("ERROR: < 20 metabolites are identified.\n")
     plot(x = rt_pred, y = rt_exp)
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.22
+1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
+    refine metabolite name with consensus name
+    use consensus name to remove complex results of MRN annotation
+2. rename output folder name from "02_result_MRN3" to "02_result_MRN_annotation"

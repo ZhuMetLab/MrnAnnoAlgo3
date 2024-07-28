@@ -6,7 +6,7 @@
 #' @param result_df result_mrn_anno table (feature-metabolite pairs)
 #' @param num_candi number of candidates (topN) for redundancy removal
 #' @param is_known_prioritization priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal
-#' @param wd_output file.path(wd, '02_result_MRN3')
+#' @param wd_output file.path(wd, '02_result_MRN_annotation')
 #'
 #' @return result_mrn_anno table with redundancy removal
 #' @export
@@ -35,13 +35,22 @@ rmRedunInMetdna3 <- function(
         result_df_rm_seedMetAnno <- result_df
     }
 
+    # refine metabolite name with consensus name ---------------------------------------------------
+    tbl_cons_name <- readxl::read_xlsx(system.file('20240727_consensus_name_check.xlsx', package = 'MrnAnnoAlgo3'))
+    idx_in_tbl <- which(result_df_rm_seedMetAnno$id %in% tbl_cons_name$id_mrn)
+    if (length(idx_in_tbl) > 0) {
+        cons_name_in_tbl <- match(result_df_rm_seedMetAnno$id[idx_in_tbl], tbl_cons_name$id_mrn) %>%
+            tbl_cons_name$consensus_name[.]
+        result_df_rm_seedMetAnno$name[idx_in_tbl] <- cons_name_in_tbl
+    }
+
     # remove redundancy: 1 to N --------------------------------------------------------------------
     result_df_rm_seedMetAnno <- result_df_rm_seedMetAnno %>% arrange(feature_mz, feature_rt)
     fs <- result_df_rm_seedMetAnno$feature_name %>% unique()
     check_seed_filter <- c()
     check_known_filter <- c()
     check_candi_filter <- c()
-    list_res_anno <- lapply(fs, function(temp_f) {
+    list_res_anno <- pbapply::pblapply(fs, function(temp_f) {
         temp_res <- result_df_rm_seedMetAnno %>% filter(feature_name == temp_f) %>% arrange(desc(total_score), id)
         # keep seed first (same as grade1)
         if ('seed' %in% temp_res$tag) {
@@ -57,6 +66,9 @@ rmRedunInMetdna3 <- function(
         } else {
             check_known_filter <<- append(check_known_filter, F)
         }
+        # keep name unique by consensus name
+        temp_res <- temp_res %>% arrange(id) %>% distinct(name, .keep_all = T) %>%
+            arrange(desc(total_score))
         # keep top N candidates (manually)
         if (nrow(temp_res) > num_candi) {
             temp_res <- temp_res[1:num_candi, ]
@@ -83,6 +95,7 @@ rmRedunInMetdna3 <- function(
         result_df = result_df_rm_1toN,
         is_only_confidence_assignment = T
     )
+    result_df_confi_assign <- result_df_confi_assign %>% arrange(feature_mz, feature_rt)
 
     ### calculate redundancy (same with MetDNA)
     ids_anno <- sort(unique(result_df_confi_assign$id))

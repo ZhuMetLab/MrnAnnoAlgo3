@@ -18,7 +18,7 @@ rmRedunInMetdna3(
 
 \item{is_known_prioritization}{priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal}
 
-\item{wd_output}{file.path(wd, '02_result_MRN3')}
+\item{wd_output}{file.path(wd, '02_result_MRN_annotation')}
 }
 \value{
 result_mrn_anno table with redundancy removal

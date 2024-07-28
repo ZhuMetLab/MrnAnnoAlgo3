@@ -21,7 +21,7 @@ getMs1Data4Mrn3 <- function(
 
     library(dplyr)
 
-    wd_output <- file.path(wd, '02_result_MRN3')
+    wd_output <- file.path(wd, '02_result_MRN_annotation')
     dir.create(wd_output, showWarnings = F, recursive = T)
 
     # convert to MRN3 ms1_data format [, c('name', 'mz', 'rt', 'ccs')]
@@ -62,7 +62,7 @@ getMs2Data4Mrn3 <- function(
 
     library(dplyr)
 
-    wd_output <- file.path(wd, '02_result_MRN3')
+    wd_output <- file.path(wd, '02_result_MRN_annotation')
     dir.create(wd_output, showWarnings = F, recursive = T)
 
     # convert to MRN3 ms2_data format (feature name matched)
@@ -111,7 +111,7 @@ getTableSeedLong4Mrn3 <- function(
 
     library(dplyr)
 
-    wd_output <- file.path(wd, '02_result_MRN3')
+    wd_output <- file.path(wd, '02_result_MRN_annotation')
     dir.create(wd_output, showWarnings = F, recursive = T)
 
     # get seed table (long) for MRN3 annotation
