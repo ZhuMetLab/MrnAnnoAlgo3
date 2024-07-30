@@ -417,3 +417,9 @@
     refine metabolite name with consensus name
     use consensus name to remove complex results of MRN annotation
 2. rename output folder name from "02_result_MRN3" to "02_result_MRN_annotation"
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.23
+1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
+    remove redundancy: N to 1 (by seeds & MRN annotations re-regression)
+2. update MRN library classyfire information (info_mrn 53583 & info_mrn_3x 765755)

@@ -6,19 +6,28 @@
 \usage{
 rmRedunInMetdna3(
   result_df,
+  wd_output,
   num_candi = 3,
   is_known_prioritization = T,
-  wd_output
+  is_clean_Nto1 = T,
+  md_mrn = NULL,
+  column = NULL
 )
 }
 \arguments{
 \item{result_df}{result_mrn_anno table (feature-metabolite pairs)}
 
+\item{wd_output}{file.path(wd, '02_result_MRN_annotation')}
+
 \item{num_candi}{number of candidates (topN) for redundancy removal}
 
 \item{is_known_prioritization}{priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal}
 
-\item{wd_output}{file.path(wd, '02_result_MRN_annotation')}
+\item{is_clean_Nto1}{re-regression by seeds & level3 results}
+
+\item{md_mrn}{md_mrn for RT re-regression}
+
+\item{column}{column for RT re-regression}
 }
 \value{
 result_mrn_anno table with redundancy removal

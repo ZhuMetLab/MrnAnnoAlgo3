@@ -4,20 +4,24 @@
 #' rmRedunInMetdna3
 #'
 #' @param result_df result_mrn_anno table (feature-metabolite pairs)
+#' @param wd_output file.path(wd, '02_result_MRN_annotation')
 #' @param num_candi number of candidates (topN) for redundancy removal
 #' @param is_known_prioritization priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal
-#' @param wd_output file.path(wd, '02_result_MRN_annotation')
+#' @param is_clean_Nto1 re-regression by seeds & level3 results
+#' @param md_mrn md_mrn for RT re-regression
+#' @param column column for RT re-regression
 #'
 #' @return result_mrn_anno table with redundancy removal
 #' @export
 #'
 rmRedunInMetdna3 <- function(
         result_df,
+        wd_output,
         num_candi = 3, # number of candidates
         is_known_prioritization = T, # priority: level3.1 (knowns) > level3.2 (unknowns)
-        wd_output
-        # info_mrn,
-        # md_mrn
+        is_clean_Nto1 = T, # re-regression by seeds & level3 results
+        md_mrn = NULL, # for RT re-regression
+        column = NULL # for RT re-regression
     ) {
 
     cat('Redundancy removal by MetDNA3 (MrnAnnoAlgo3):', '\n')
@@ -36,7 +40,7 @@ rmRedunInMetdna3 <- function(
     }
 
     # refine metabolite name with consensus name ---------------------------------------------------
-    tbl_cons_name <- readxl::read_xlsx(system.file('20240727_consensus_name_check.xlsx', package = 'MrnAnnoAlgo3'))
+    tbl_cons_name <- readr::read_csv(system.file('mrn_consensus_name.csv', package = 'MrnAnnoAlgo3'))
     idx_in_tbl <- which(result_df_rm_seedMetAnno$id %in% tbl_cons_name$id_mrn)
     if (length(idx_in_tbl) > 0) {
         cons_name_in_tbl <- match(result_df_rm_seedMetAnno$id[idx_in_tbl], tbl_cons_name$id_mrn) %>%
@@ -90,12 +94,174 @@ rmRedunInMetdna3 <- function(
     )
     readr::write_csv(stat_df, file.path(wd_output, 'stat_rm_redun.csv'), na = '')
 
+    # remove redundancy: N to 1 --------------------------------------------------------------------
+    if (is_clean_Nto1) {
+        # reconstruct RT prediction model
+        table_mrn_rt <- result_df_rm_1toN %>% select(id, feature_rt) %>% arrange(id)
+        # remove duplicated ids
+        dup_ids <- table_mrn_rt$id[which(duplicated(table_mrn_rt$id))] %>% unique()
+        table_mrn_rt <- table_mrn_rt %>%
+            dplyr::filter(!(id %in% dup_ids))
+        table_mrn_rt <- table_mrn_rt[table_mrn_rt$id %in% rownames(md_mrn), ]
+        cat("There are ", nrow(table_mrn_rt), " metabolites are used for RT re-prediction.\n", sep = "")
+        ### filter ID MRN
+        md <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), ]
+        ### remove NA which appear in more than 50% metabolites
+        md1 <- md
+        remove.idx1 <- which(apply(md, 2, function(x) {sum(is.na(x)/nrow(md))}) > 0.5)
+        if (length(remove.idx1) > 0) md1 <- md[, -remove.idx1]
+        ### impute NA
+        md2 <- t(impute::impute.knn(data = t(md1))[[1]])
+        ### remove MD which are same in all metabolites
+        md3 <- md2
+        remove.idx2 <- which(apply(md2, 2, sd) == 0)
+        if (length(remove.idx2) > 0) md3 <- md2[, -remove.idx2]
+        # construct RF model
+        train.y <- table_mrn_rt$feature_rt
+        train.x <- md3
+        rm(list = c('md', 'md1', 'md2', 'md3')); gc()
+        switch(
+            column,
+            "hilic" = {
+                marker.name <- c('XLogP', "tpsaEfficiency", "WTPT.5", "khs.dsCH", "MLogP", "nAcid", "nBase", "BCUTp.1l")
+            },
+            "rp" = {
+                marker.name <- c('XLogP', "WTPT.4", "WTPT.5", "ALogp2", "BCUTp.1l")
+            }
+        )
+        idx <- match(marker.name, colnames(train.x))
+        idx <- idx[!is.na(idx)]
+        if (length(idx) == 0) stop("Your markers are not in MD data.\n")
+        train.x <- train.x[, idx]
+        cat('Tuning RF function using caret approach.\n')
+        train.data <- data.frame(RT = train.y, train.x, stringsAsFactors = FALSE)
+        para_control <- caret::trainControl(method = 'cv', number = 10, search = 'random', verbose = F)
+        set.seed(100)
+        rf.reg <- caret::train(
+            RT ~ ., data = train.data,
+            method = 'rf',
+            metric = 'Rsquared',
+            tuneLength = 10,
+            trControl = para_control,
+            importance = T,
+            allowParallel = T
+        )
+        # test RT prediction results
+        test.x <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), idx]
+        temp.rt <- predict(object = rf.reg, newdata = test.x)
+        table_mrn_rt$lib_pred_rt_2 <- temp.rt
+        rt_exp <- table_mrn_rt$feature_rt
+        rt_pred <- table_mrn_rt$lib_pred_rt_2
+        r_squared <- 1 - sum((rt_exp - rt_pred)^2) / sum((rt_exp - mean(rt_pred))^2)
+        mse <- mean((rt_exp - rt_pred)^2)
+        rmse <- sqrt(mse)
+        mae <- mean(abs(rt_exp - rt_pred))
+        medae <- median(abs(rt_exp - rt_pred))
+        mre <- mean(abs((rt_exp - rt_pred) / rt_exp)) * 100
+        medre <- median(abs((rt_exp - rt_pred) / rt_exp)) * 100
+        dir.create(path = file.path(wd_output, '00_intermediate_data'), showWarnings = F, recursive = T)
+        pdf(file.path(wd_output, '00_intermediate_data/rt_prediction_plot_2.pdf'), width = 6, height = 6)
+        max_val <- max(c(rt_exp, rt_pred))
+        plot(
+            x = rt_exp,
+            y = rt_pred,
+            xlim = c(0, max_val),
+            ylim = c(0, max_val),
+            main = "RT prediction of seeds & MRN annotations",
+            xlab = "Experimental RT (s)",
+            ylab = "Predicted RT (s)",
+            pch = 19, col = "blue"
+        )
+        abline(a = 0, b = 1, lty = 2, col = "red")
+        text(x = max_val * 0.05, y = max_val * 0.9, labels = paste0("R-squared: ", round(r_squared, 4)), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.85, labels = paste0("MeanAE: ", round(mae, 2), " s"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.8, labels = paste0("MedianAE: ", round(medae, 2), " s"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.75, labels = paste0("MeanRE: ", round(mre, 2), "%"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.7, labels = paste0("MedianRE: ", round(medre, 2), "%"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.65, labels = paste0("RMSE: ", round(rmse, 2), " s"), pos = 4)
+        dev.off()
+
+        # predict RT for MRN results
+        test.x <- md_mrn[sort(unique(result_df_rm_1toN$id)), idx]
+        mrn_rt <- rep(NA, nrow(test.x))
+        names(mrn_rt) <- rownames(test.x)
+        ### remove unpredictable metabolite and impute NA in text.x
+        idx1 <- which(apply(test.x, 1, function(x) {sum(is.na(x))/ncol(test.x) < 0.5}))
+        test.x1 <- test.x[idx1, ]
+        test.x1 <- t(impute::impute.knn(data = t(test.x1))[[1]])
+        ### predict RT
+        temp.rt <- predict(object = rf.reg, newdata = test.x1)
+        mrn_rt[idx1] <- temp.rt
+        ### remove NA
+        mrn_rt <- mrn_rt[!is.na(mrn_rt)]
+
+        # check delta RT before-after re-prediction
+        # exclude seeds (feature RT = predicted RT)
+        idx_level3 <- which(result_df_rm_1toN$tag != 'seed')
+        rt_after <- mrn_rt[match(result_df_rm_1toN$id[idx_level3], names(mrn_rt))]
+        rt_before <- result_df_rm_1toN$rt[idx_level3]
+        # remove NA
+        idx_na <- unname(which(is.na(rt_after)))
+        if (length(idx_na) > 0) {
+            rt_after[idx_na] <- 0
+            rt_before[idx_na] <- 0
+        }
+        mae <- mean(abs(rt_before - rt_after))
+        medae <- median(abs(rt_before - rt_after))
+        mre <- mean(abs((rt_before - rt_after) / rt_before)) * 100
+        medre <- median(abs((rt_before - rt_after) / rt_before)) * 100
+        pdf(file.path(wd_output, '00_intermediate_data/rt_prediction_comparsion.pdf'), width = 6, height = 6)
+        max_val <- max(c(rt_after, rt_before))
+        plot(
+            x = rt_after,
+            y = rt_before,
+            xlim = c(0, max_val),
+            ylim = c(0, max_val),
+            main = "RT prediction comparsion",
+            xlab = "Re-predicted RT (s)",
+            ylab = "Predicted RT (s)",
+            pch = 19, col = "blue"
+        )
+        abline(a = 0, b = 1, lty = 2, col = "red")
+        text(x = max_val * 0.05, y = max_val * 0.85, labels = paste0("MeanAE: ", round(mae, 2), " s"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.8, labels = paste0("MedianAE: ", round(medae, 2), " s"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.75, labels = paste0("MeanRE: ", round(mre, 2), "%"), pos = 4)
+        text(x = max_val * 0.05, y = max_val * 0.7, labels = paste0("MedianRE: ", round(medre, 2), "%"), pos = 4)
+        dev.off()
+
+        # keep only 1 smallest RT error for N TO 1 results
+        ids <- result_df_rm_1toN$id %>% unique() %>% sort()
+        keep_features <- sapply(ids, function(temp_id) {
+            temp_res <- result_df_rm_1toN %>% filter(id == temp_id)
+            if (nrow(temp_res) <= 1) return(paste0(temp_res$feature_name, '--', temp_res$id))
+            if (temp_id %in% names(rt_after)) {
+                temp_feature_rt <- temp_res$feature_rt
+                temp_check_rt <- rt_after[temp_id]
+                idx_closed <- which.min(abs(temp_feature_rt - temp_check_rt))[1]
+                return(paste0(temp_res$feature_name[idx_closed], '--', temp_res$id[idx_closed]))
+            } else return(paste0(temp_res$feature_name, '--', temp_res$id))
+        }) %>% unlist()
+        all_f_m_pairs <- paste0(result_df_rm_1toN$feature_name, '--', result_df_rm_1toN$id)
+        # keep seed results
+        keep_features <- c(keep_features, all_f_m_pairs[result_df_rm_1toN$tag == 'seed']) %>% unique()
+        result_df_rm_1toN_Nto1 <- result_df_rm_1toN[all_f_m_pairs %in% keep_features, ]
+        removed_Nto1_results <- result_df_rm_1toN[!(all_f_m_pairs %in% keep_features), ]
+        readr::write_csv(removed_Nto1_results, file.path(wd_output, 'removed_redun_results_Nto1_part.csv'), na = '')
+
+    } else {
+        result_df_rm_1toN_Nto1 <- result_df_rm_1toN
+    }
+
     # only confidence assignment (same with MetDNA)
     result_df_confi_assign <- MrnAnnoAlgo3::rmRedunInMrn3(
-        result_df = result_df_rm_1toN,
+        result_df = result_df_rm_1toN_Nto1,
         is_only_confidence_assignment = T
     )
     result_df_confi_assign <- result_df_confi_assign %>% arrange(feature_mz, feature_rt)
+    all_f_m_pairs_raw <- paste0(result_df$feature_name, '--', result_df$id)
+    all_f_m_pairs_final <- paste0(result_df_confi_assign$feature_name, '--', result_df_confi_assign$id)
+    removed_results <- result_df[!(all_f_m_pairs_raw %in% all_f_m_pairs_final), ]
+    readr::write_csv(removed_results, file.path(wd_output, 'removed_redun_results.csv'), na = '')
 
     ### calculate redundancy (same with MetDNA)
     ids_anno <- sort(unique(result_df_confi_assign$id))
@@ -108,58 +274,5 @@ rmRedunInMetdna3 <- function(
     cat('\n')
 
     return(result_df_confi_assign)
-
-
-    # # No application !
-    # # remove redundancy: N to 1 --------------------------------------------------------------------
-    # # reconstruct RT prediction model
-    # table_mrn_rt <- result_df_rm_1toN %>% select(id, feature_rt) %>% arrange(id)
-    # table_mrn_rt <- table_mrn_rt %>%
-    #     dplyr::group_by(id) %>%
-    #     dplyr::summarize(feature_rt = median(feature_rt, na.rm = T))
-    # table_mrn_rt$lib_pred_rt <- match(table_mrn_rt$id, info_mrn$id) %>% info_mrn$rt[.]
-    # idx_na <- which(is.na(table_mrn_rt$lib_pred_rt))
-    # if (length(idx_na) > 0) table_mrn_rt <- table_mrn_rt[-idx_na, ]
-    # plot(table_mrn_rt$lib_pred_rt, table_mrn_rt$feature_rt)
-    # cat("There are ", nrow(table_mrn_rt), " metabolites are used for RT prediction.\n", sep = "")
-    #
-    # ### filter ID MRN
-    # md <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), ]
-    # ### remove NA which appear in more than 50% metabolites
-    # md1 <- md
-    # remove.idx1 <- which(apply(md, 2, function(x) {sum(is.na(x)/nrow(md))}) > 0.5)
-    # if (length(remove.idx1) > 0) md1 <- md[, -remove.idx1]
-    # ### impute NA
-    # md2 <- t(impute::impute.knn(data = t(md1))[[1]])
-    # ### remove MD which are same in all metabolites
-    # md3 <- md2
-    # remove.idx2 <- which(apply(md2, 2, sd) == 0)
-    # if (length(remove.idx2) > 0) md3 <- md2[, -remove.idx2]
-    #
-    # # construct RF model
-    # train.y <- table_mrn_rt$feature_rt
-    # train.x <- md3
-    #
-    # rm(list = c('md', 'md1', 'md2', 'md3')); gc()
-    #
-    # cat('Tuning RF function using caret approach.\n')
-    # train.data <- data.frame(RT = train.y, train.x, stringsAsFactors = FALSE)
-    # para_control <- caret::trainControl(method = 'cv', number = 10, search = 'random', verbose = F)
-    # set.seed(100)
-    # rf.reg <- caret::train(
-    #     RT ~ ., data = train.data,
-    #     method = 'rf',
-    #     metric = 'Rsquared',
-    #     tuneLength = 10,
-    #     trControl = para_control,
-    #     importance = T,
-    #     allowParallel = T
-    # )
-    #
-    # # predict RT
-    # test.x <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), ]
-    # temp.rt <- predict(object = rf.reg, newdata = test.x)
-    # table_mrn_rt$lib_pred_rt_2 <- temp.rt
-    # plot(table_mrn_rt$lib_pred_rt_2, table_mrn_rt$feature_rt)
 
 }

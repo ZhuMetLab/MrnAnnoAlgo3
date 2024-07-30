@@ -20,6 +20,7 @@ MrnAnnoAlgo(
   ms2_sim_method = c("dp", "hybrid"),
   num_candi = 3,
   is_known_prioritization = T,
+  is_clean_Nto1 = T,
   thread = 4
 )
 }
@@ -48,11 +49,13 @@ MrnAnnoAlgo(
 
 \item{adduct_for_MRN_anno}{NULL or limited to some types}
 
-\item{ms2_sim_method}{dp or hybrid}
+\item{ms2_sim_method}{'dp' or 'hybrid'}
 
 \item{num_candi}{number of candidates (topN) for redundancy removal}
 
-\item{is_known_prioritization}{priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal}
+\item{is_known_prioritization}{"TRUE" priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal}
+
+\item{is_clean_Nto1}{"TRUE" re-regression by seeds & level3 results and clean Nto1 results}
 
 \item{thread}{thread (default is 4).}
 }

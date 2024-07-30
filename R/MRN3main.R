@@ -16,9 +16,10 @@
 #' @param ex_step extension step: '0', '1', '2'
 #' @param is_rt_pred_by_metdna2 TRUE!
 #' @param adduct_for_MRN_anno NULL or limited to some types
-#' @param ms2_sim_method dp or hybrid
+#' @param ms2_sim_method 'dp' or 'hybrid'
 #' @param num_candi number of candidates (topN) for redundancy removal
-#' @param is_known_prioritization priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal
+#' @param is_known_prioritization "TRUE" priority: level3.1 (knowns) > level3.2 (unknowns) for redundancy removal
+#' @param is_clean_Nto1 "TRUE" re-regression by seeds & level3 results and clean Nto1 results
 #'
 #' @return null
 #' @export
@@ -50,6 +51,7 @@ MrnAnnoAlgo <- function(
         # redundancy removal settings (for MetDNA3, no old MetDNA!)
         num_candi = 3, # number of candidates
         is_known_prioritization = T, # priority: level3.1 (knowns) > level3.2 (unknowns)
+        is_clean_Nto1 = T, # re-regression by seeds & level3 results and clean Nto1 results
         # other settings
         thread = 4
         ) {
@@ -729,9 +731,12 @@ MrnAnnoAlgo <- function(
     # redundancy removal ---------------------------------------------------------------------------
     result_mrn_anno_rm_redun_by_metdna3 <- MrnAnnoAlgo3::rmRedunInMetdna3(
         result_df = result_mrn_anno,
+        wd_output = wd_output,
         num_candi = num_candi, # number of candidates
         is_known_prioritization = is_known_prioritization, # priority: level3.1 (knowns) > level3.2 (unknowns)
-        wd_output = wd_output
+        is_clean_Nto1 = is_clean_Nto1, # re-regression by seeds & level3 results
+        md_mrn = md_mrn, # for RT re-regression
+        column = column # for RT re-regression
     )
 
     readr::write_csv(result_mrn_anno_rm_redun_by_metdna3, file.path(wd_output, 'result_mrn_anno_with_confidence.csv'), na = '')
