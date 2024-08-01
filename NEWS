@@ -423,3 +423,9 @@
 1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
     remove redundancy: N to 1 (by seeds & MRN annotations re-regression)
 2. update MRN library classyfire information (info_mrn 53583 & info_mrn_3x 765755)
+
+----------------------------------------------------------------------------------------------------
+### version 0.2.24
+1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
+    remove redundancy: N to 1 (by seeds & MRN annotations re-regression)
+    update workflow: seed -> name -> newRTmodel -> Nto1 -> 1toN

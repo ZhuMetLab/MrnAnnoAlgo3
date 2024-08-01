@@ -719,7 +719,7 @@ MrnAnnoAlgo <- function(
     table_adduct_anno_only <- list_adduct_anno_only %>% dplyr::bind_rows()
     # readr::write_csv(table_mrn_anno, file.path(wd_output, 'table_mrn_anno_before_ms1_adduct_anno.csv'))
     result_mrn_anno <- dplyr::bind_rows(result_mrn_anno, table_adduct_anno_only)
-    result_mrn_anno <- result_mrn_anno %>% dplyr::arrange(id)
+    result_mrn_anno <- result_mrn_anno %>% arrange(feature_mz, feature_rt)
     readr::write_csv(table_adduct_anno_only, file.path(wd_output, 'table_adduct_anno_only.csv'), na = '')
     readr::write_csv(result_mrn_anno, file.path(wd_output, 'result_mrn_anno_raw.csv'), na = '')
 

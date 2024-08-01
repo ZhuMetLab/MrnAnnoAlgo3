@@ -25,9 +25,9 @@ rmRedunInMetdna3(
 
 \item{is_clean_Nto1}{re-regression by seeds & level3 results}
 
-\item{md_mrn}{md_mrn for RT re-regression}
+\item{md_mrn}{'md_mrn' for RT re-regression}
 
-\item{column}{column for RT re-regression}
+\item{column}{'column' for RT re-regression}
 }
 \value{
 result_mrn_anno table with redundancy removal
