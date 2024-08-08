@@ -70,7 +70,7 @@ rmRedunInMetdna3 <- function(
     readr::write_csv(removed_redun_results_feature_part, file.path(wd_output, 'removed_redun_results_feature_part.csv'), na = '')
 
     # reconstruct RT prediction model (for 1 to 1 results) -----------------------------------------
-    mrn_rts <- reconstructRtPredModel(
+    mrn_rts <- MrnAnnoAlgo3::reconstructRtPredModel(
         result_df_rm_by_f = result_df_rm_by_f,
         md_mrn = md_mrn,
         column = column,
@@ -205,7 +205,7 @@ rmRedunInMetdna3 <- function(
     ### calculate redundancy (same with MetDNA) ----------------------------------------------------
     ids_anno <- sort(unique(result_df_confi_assign$id))
     peaks_anno <- sort(unique(result_df_confi_assign$feature_name))
-    redun <- calculateRedundancyInMrn3(result_df_confi_assign)
+    redun <- MrnAnnoAlgo3::calculateRedundancyInMrn3(result_df_confi_assign)
     cat('Annotated peaks:', length(peaks_anno), '\n')
     cat('Annotated metabolites:', length(ids_anno), '\n')
     cat('Annotations:', nrow(result_df_confi_assign), '\n')
@@ -288,8 +288,7 @@ reconstructRtPredModel <- function(result_df_rm_by_f, md_mrn, column, wd_output)
         allowParallel = T
     )
     # test RT prediction results
-    test.x <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), idx]
-    temp.rt <- predict(object = rf.reg, newdata = test.x)
+    temp.rt <- predict(object = rf.reg, newdata = train.data)
     table_mrn_rt$lib_pred_rt_2 <- temp.rt
     rt_exp <- table_mrn_rt$feature_rt
     rt_pred <- table_mrn_rt$lib_pred_rt_2

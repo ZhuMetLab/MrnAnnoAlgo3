@@ -429,3 +429,15 @@
 1. update redundancy removal functions for MRN3 & MetDNA3 (FUNC: rmRedunInMetdna3)
     remove redundancy: N to 1 (by seeds & MRN annotations re-regression)
     update workflow: seed -> name -> newRTmodel -> Nto1 -> 1toN
+
+----------------------------------------------------------------------------------------------------
+### version 0.3 = version 0.2.24
+
+----------------------------------------------------------------------------------------------------
+### version 0.3.11
+1. fix bug: test RT prediction results (FUNC: reconstructRtPredModel)
+    from:
+        test.x <- md_mrn[match(table_mrn_rt$id, rownames(md_mrn)), idx]
+        temp.rt <- predict(object = rf.reg, newdata = test.x) # maybe NA!
+    to:
+        temp.rt <- predict(object = rf.reg, newdata = train.data)
