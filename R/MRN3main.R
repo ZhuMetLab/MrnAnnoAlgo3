@@ -40,7 +40,7 @@ MrnAnnoAlgo <- function(
         # experimental settings
         instrument_type = c('Orbitrap', 'TOF'),
         column = c('hilic', 'rp'),
-        method_lc = c('Amide12min', 'Amide23min', 'Other', 'MetlinRP', 'RP12min', 'RP12min_v2'),
+        method_lc = c('Amide12min', 'Amide23min', 'Other', 'MetlinRP', 'RP12min', 'RP12min_v2', "Amide6min", "RP6min"),
         polarity = c('positive', 'negative'),
         # MRN annotation settings
         lib_type_mrn = c('MRN3', 'MRN2'), # MRN2 = KEGG_MRN_ex2 in MetDNA2_function
@@ -99,7 +99,7 @@ MrnAnnoAlgo <- function(
 
     # LC and method setting
     column <- match.arg(column)
-    method_lc <- match.arg(method_lc)
+    # method_lc <- match.arg(method_lc)
     ex_step <- match.arg(ex_step)
 
     # polarity & adduct setting
@@ -615,6 +615,8 @@ MrnAnnoAlgo <- function(
         potential_f_m_pair <- paste0(table_mrn_anno$feature_name, '--', table_mrn_anno$id)
         idx_in_seed <- which(potential_f_m_pair %in% seed_f_m_pair)
         if (length(idx_in_seed) > 0) table_mrn_anno <- table_mrn_anno[-idx_in_seed, ]
+        table_mrn_anno$feature_name <- as.character(table_mrn_anno$feature_name)
+        seed_anno$feature_name <- as.character(seed_anno$feature_name)
         table_mrn_anno <- dplyr::bind_rows(seed_anno, table_mrn_anno) %>% dplyr::arrange(id)
 
         # start recursive annotation by seeds
@@ -718,6 +720,8 @@ MrnAnnoAlgo <- function(
     })
     table_adduct_anno_only <- list_adduct_anno_only %>% dplyr::bind_rows()
     # readr::write_csv(table_mrn_anno, file.path(wd_output, 'table_mrn_anno_before_ms1_adduct_anno.csv'))
+    result_mrn_anno$feature_name <- as.character(result_mrn_anno$feature_name)
+    table_adduct_anno_only$feature_name <- as.character(table_adduct_anno_only$feature_name)
     result_mrn_anno <- dplyr::bind_rows(result_mrn_anno, table_adduct_anno_only)
     result_mrn_anno <- result_mrn_anno %>% arrange(feature_mz, feature_rt)
     readr::write_csv(table_adduct_anno_only, file.path(wd_output, 'table_adduct_anno_only.csv'), na = '')

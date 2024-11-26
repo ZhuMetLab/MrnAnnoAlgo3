@@ -441,3 +441,11 @@
         temp.rt <- predict(object = rf.reg, newdata = test.x) # maybe NA!
     to:
         temp.rt <- predict(object = rf.reg, newdata = train.data)
+
+----------------------------------------------------------------------------------------------------
+### version 0.3.3
+1. update parameter: "method_lc"
+
+----------------------------------------------------------------------------------------------------
+### version 3.1 (same as MetDNA3)
+1. fix bug: Can‘t combine `..1$feature_name` <character> and `..2$feature_name` <integer>.
