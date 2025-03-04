@@ -8,7 +8,7 @@ Please note that `MrnAnnoAlgo3` alone cannot directly implement the metabolite a
 
 ## Download
 
-You can download `MetDNA3` from [Github](https://github.com/ptpb781209069/MrnAnnoAlgo3.git).
+You can download `MrnAnnoAlgo3` from [Github](https://github.com/ptpb781209069/MrnAnnoAlgo3.git).
 
 ## Need help?
 
