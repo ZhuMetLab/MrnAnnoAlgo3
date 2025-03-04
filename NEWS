@@ -449,3 +449,16 @@
 ----------------------------------------------------------------------------------------------------
 ### version 3.1 (same as MetDNA3)
 1. fix bug: Can‘t combine `..1$feature_name` <character> and `..2$feature_name` <integer>.
+
+----------------------------------------------------------------------------------------------------
+### version 3.1.02
+1. MRN benchmark test: use SGMN (Structral similarity-based network) (Dice coefficient >= 0.4)
+
+----------------------------------------------------------------------------------------------------
+### version 3.1.03
+1. MRN benchmark test: use RGMN (Delta formula-based network) (from reported RPs)
+
+----------------------------------------------------------------------------------------------------
+### version 3.1.04
+1. MRN benchmark test: use FCMN (Fully connected network)
+    node_to <- sprintf("MRN%06d", 1:53583)

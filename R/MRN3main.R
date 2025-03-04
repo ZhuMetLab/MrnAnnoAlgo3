@@ -481,7 +481,7 @@ MrnAnnoAlgo <- function(
             # use all-step ids
             node_to <- node_to$id
 
-            # # version 0.2.14.2.4: FCMN (Fully-connected metabolite network) # neighbors = all nodes temp!
+            # # version 3.1.04: FCMN (Fully-connected metabolite network) # neighbors = all nodes temp!
             # node_to <- sprintf("MRN%06d", 1:53583)
 
             if (length(node_to) == 0) return(NULL)

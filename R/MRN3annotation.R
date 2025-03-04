@@ -184,7 +184,7 @@ getMetAnno <- function(
             # 100 in MetDNA2
             if (length(temp_to_id) > topN_neighbor) temp_to_id <- sort(temp_to_id)[1:topN_neighbor]
 
-            # # version 0.2.14.2.4: FCMN (Fully-connected metabolite network) # neighbors = all nodes temp!
+            # # version 3.1.04: FCMN (Fully-connected metabolite network) # neighbors = all nodes temp!
             # temp_to_id <- sprintf("MRN%06d", 1:53583)
 
             # check valid result:
