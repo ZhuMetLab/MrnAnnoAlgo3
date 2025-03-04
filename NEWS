@@ -462,3 +462,7 @@
 ### version 3.1.04
 1. MRN benchmark test: use FCMN (Fully connected network)
     node_to <- sprintf("MRN%06d", 1:53583)
+
+----------------------------------------------------------------------------------------------------
+### version 3.1.1
+1. update code comments

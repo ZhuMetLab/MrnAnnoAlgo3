@@ -320,13 +320,16 @@ MrnAnnoAlgo <- function(
     seed_anno$ms2_score <- 1
     readr::write_csv(seed_anno, file.path(wd_output, 'table_seed_anno.csv'), na = '')
 
-    # simplify MRN object & MS1 data ---------------------------------------------------------------
-    cat('Simplify MRN object & MS1 data.', '\n')
+    # [Step 1] Two-layer interactive networking topology -------------------------------------------
+    cat('[Step 1] Two-layer interactive networking topology.', '\n')
+    # cat('Simplify MRN & LC-MS data.', '\n')
     cat('\n')
 
     # simply info_mrn !
     info_mrn <- info_mrn[info_mrn$id %in% igraph::V(obj_mrn)$name, ]
-    # create global potential annotation results
+    # create global putative annotation results (feature-metabolite pair)
+    # get knowledge-data connections (data layer <-> knowledge layer) ------------------------------
+    cat('Get knowledge-data connections (data layer <-> knowledge layer)', '\n')
     if (all(c('table_ms1_anno.csv') %in% list.files(wd_output))) {
         table_ms1_anno <- readr::read_csv(file.path(wd_output, 'table_ms1_anno.csv'))
     } else {
@@ -436,29 +439,30 @@ MrnAnnoAlgo <- function(
     readr::write_csv(table_ms1_anno_with_ms2, file.path(wd_output, 'table_ms1_anno_with_ms2.csv'), na = '')
     readr::write_csv(table_ms1_anno_only, file.path(wd_output, 'table_ms1_anno_only.csv'), na = '')
 
-    cat('Putative annotations:', nrow(table_ms1_anno), '\n')
-    cat('Putative annotations (features with MS2, for MRN annotation):', nrow(table_ms1_anno_with_ms2), '\n')
+    cat('Putative annotations (feature-metabolite pairs):', nrow(table_ms1_anno), '\n')
+    cat('Putative annotations (feature-metabolite pairs & feature w/ MS2):', nrow(table_ms1_anno_with_ms2), '\n')
 
-    # get simplified MRN
-    # After MRN2 is simplified, it will reduce the propagation efficiency and will not be implemented.
+    # Get constrained MRN from LC-MS data (data layer -> knowledge layer) --------------------------
+    cat('Get constrained MRN from LC-MS data (data layer -> knowledge layer)', '\n')
+    # After MRN2 is simplified, it will reduce the propagation efficiency and will not be implemented!
     if (lib_type_mrn == 'MRN3') {
         simplified_nodes <- table_ms1_anno$id %>% unique() %>% sort()
         simplified_nodes <- simplified_nodes[simplified_nodes %in% V(obj_mrn)$name]
         obj_mrn <- induced_subgraph(obj_mrn, simplified_nodes)
     }
-    cat('Simplified MRN metabolites:', length(obj_mrn), '\n')
-    cat('Simplified MRN pairs:', nrow(igraph::get.edgelist(obj_mrn)), '\n')
-    # cat('MRN metabolites:', length(obj_mrn), '\n')
-    # cat('MRN pairs:', nrow(igraph::get.edgelist(obj_mrn)), '\n')
+    cat('MS1-constrained MRN metabolites:', length(obj_mrn), '\n')
+    cat('MS1-constrained MRN RPs:', nrow(igraph::get.edgelist(obj_mrn)), '\n')
     cat('\n')
 
-    # get links of features with MS2 (MS2 network edges) -------------------------------------------
+    # Construct feature network in data layer by mapping (knowledge layer -> data layer) -----------
+    cat('Construct feature network in data layer by mapping (knowledge layer -> data layer)', '\n')
+    # get feature pairs of features with MS2 (feature network edges)
     if ('table_ms2_edges.rda' %in% list.files(wd_output)) {
-        cat('Load MS2 network edges (feature MS2 pairs).', '\n')
+        cat('Load feature network (feature pairs).', '\n')
         cat('\n')
         load(file.path(wd_output, 'table_ms2_edges.rda'))
     } else {
-        cat('Get MS2 network edges (feature MS2 pairs).', '\n')
+        cat('Get feature network (feature pairs).', '\n')
 
         library(parallel)
         cl <- parallel::makeCluster(thread)
@@ -499,19 +503,23 @@ MrnAnnoAlgo <- function(
         comb_from_to <- apply(table_ms2_edges, 1, function(row)
             stringr::str_c(sort(c(row[1], row[2])), collapse = '--'))
         table_ms2_edges <- table_ms2_edges[which(!duplicated(comb_from_to)),]
-        cat('MS2 network edges:', nrow(table_ms2_edges), '\n')
+        fs_net <- c(table_ms2_edges$from, table_ms2_edges$to) %>% unique()
+        cat('Feature network nodes:', length(fs_net), '\n')
+        cat('Feature network edges:', nrow(table_ms2_edges), '\n')
         cat('\n')
         rm(list = c('list_ms2_name_link'))
         save(table_ms2_edges, file = file.path(wd_output, 'table_ms2_edges.rda'))
     }
 
-    # calculate similarity of MS2 network edges (MS2 pairs) ----------------------------------------
+    # Calculate MS2 similarity of feature network (data layer) -------------------------------------
+    cat('Calculate MS2 similarity of feature network (data layer)', '\n')
+    # calculate similarity of MS2 network (feature pairs)
     if ('table_ms2_network.rda' %in% list.files(wd_output)) {
-        cat('Load similarity of MS2 network edges  (feature MS2 pairs).', '\n')
+        cat('Load similarity of feature network (feature pairs).', '\n')
         cat('\n')
         load(file.path(wd_output, 'table_ms2_network.rda'))
     } else {
-        cat('Calculate similarity of MS2 network edges (feature MS2 pairs).', '\n')
+        cat('Calculate similarity of feature network (feature pairs).', '\n')
         cat('\n')
         library(parallel)
         cl <- parallel::makeCluster(thread)
@@ -594,16 +602,58 @@ MrnAnnoAlgo <- function(
         rm(list = c('ms2_scores')); gc()
     }
 
+    # MS2 similarity constraint
     table_ms2_network_filter <- table_ms2_network %>%
         # filter(scoreReverse >= ms2_cutoff) # 20240131 before
         # filter(scoreReverse >= ms2_cutoff | matchFrag >= 4) # 20240401 before
         filter(ms2_score >= ms2_cutoff)
+    fs_net <- c(table_ms2_network_filter$from, table_ms2_network_filter$to) %>% unique()
+    cat('Knowledge-constrained feature network nodes:', length(fs_net), '\n')
+    cat('Knowledge-constrained feature network edges:', nrow(table_ms2_network_filter), '\n')
+    cat('\n')
     save(table_ms2_network_filter, file = file.path(wd_output, 'table_ms2_network_filter.rda'))
     rm(list = c('table_ms2_edges')); gc()
 
-    # recursive annotation with seeds --------------------------------------------------------------
+    # Get data-constrained MRN (data layer -> knowledge layer) -------------------------------------
+    cat('Get data-constrained MRN (data layer -> knowledge layer)', '\n')
+    tbl_edge <- igraph::as_data_frame(obj_mrn) %>% as_tibble()
+    table_ms1_anno_with_ms2_rebuild <- table_ms1_anno_with_ms2 %>% filter(id %in% names(igraph::V(obj_mrn)))
+    f_pairs <- sapply(seq_len(nrow(table_ms2_network_filter)), function(j) {
+        sort(c(table_ms2_network_filter$from[j], table_ms2_network_filter$to[j])) %>% paste0(collapse = "_")
+    }) %>% unname()
+    feat_map <- table_ms1_anno_with_ms2_rebuild %>%
+        group_by(id) %>%
+        summarise(features = list(feature_name), .groups = "drop") %>%
+        tibble::deframe()
+    # library(parallel)
+    # cl <- parallel::makeCluster(12)
+    # clusterExport(cl, varlist = c("tbl_edge", "feat_map", "f_pairs"), envir = environment())
+    # clusterEvalQ(cl, library(stringr))
+    # is_sim_ms2 <- pbapply::pbsapply(cl = cl, seq_len(nrow(tbl_edge)), function(i) {
+    is_sim_ms2 <- pbapply::pbsapply(seq_len(nrow(tbl_edge)), function(i) {
+        id_from_ <- tbl_edge$from[i]
+        id_to <- tbl_edge$to[i]
+        f_from <- feat_map[[id_from_]]
+        f_to <- feat_map[[id_to]]
+        if (is.null(f_from) || is.null(f_to)) return(FALSE)
+        temp_pairs <- unlist(lapply(f_from, function(f) {
+            sapply(f_to, function(t) paste0(sort(c(f, t)), collapse = "_"))
+        }))
+        any(temp_pairs %in% f_pairs)
+    })
+    # stopCluster(cl)
+    tbl_edge$is_sim_ms2 <- is_sim_ms2
+    tbl_edge_sim_ms2 <- tbl_edge %>% filter(is_sim_ms2)
+    obj_mrn <- igraph::graph_from_data_frame(tbl_edge_sim_ms2, directed = F)
+    cat('Data-constrained MRN metabolites:', length(obj_mrn), '\n')
+    cat('Data-constrained MRN RPs:', nrow(igraph::get.edgelist(obj_mrn)), '\n')
+    cat('\n')
+
+    # [Step 2] Seed-driven recursive annotation ----------------------------------------------------
+    cat('[Step 2] Seed-driven recursive annotation', '\n')
+    # recursive annotation with seeds
     if ('table_mrn_anno.csv' %in% list.files(wd_output)) {
-        cat('Load recursive annotation result.', '\n')
+        cat('Load recursive annotation results.', '\n')
         cat('\n')
         table_mrn_anno <- readr::read_csv(file.path(wd_output, 'table_mrn_anno.csv'))
     } else {
@@ -629,14 +679,16 @@ MrnAnnoAlgo <- function(
 
             # summary before recursive annotation
             len_seed_feature <- table_mrn_anno$feature_name[idx_seeds] %>% unique() %>% length()
+            len_seed_metabolite <- table_mrn_anno$id[idx_seeds] %>% unique() %>% length()
             cat('\n')
             cat('Round:', round, '\n')
+            cat('Seed number:', length(idx_seeds), '\n')
             cat('Seed feature number:', len_seed_feature, '\n')
-            cat('Seed metabolite number:', length(idx_seeds), '\n')
+            cat('Seed metabolite number:', len_seed_metabolite, '\n')
             cat('\n')
 
-            cat('Isotope & Adduct Annotation', '\n')
-            cat('\n')
+            # cat('Isotope & Adduct Annotation', '\n')
+            # cat('\n')
 
             # skip isotopc annotation (meaningless)
             # input 'table_mrn_anno' and 'idx_seeds' for adduct search
@@ -647,8 +699,8 @@ MrnAnnoAlgo <- function(
                 rt_tol_adductAnno = rt_tol_adductAnno
             )
 
-            cat('Metabolite Annotation', '\n')
-            cat('\n')
+            # cat('Metabolite Annotation', '\n')
+            # cat('\n')
 
             table_mrn_anno <- getMetAnno(
                 table_anno = table_mrn_anno,
