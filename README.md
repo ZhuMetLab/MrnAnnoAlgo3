@@ -5,7 +5,8 @@
 
 **Knowledge and Data-driven Two-layer Networking for Accurate Metabolite Annotation in Untargeted Metabolomics**
 
-`MrnAnnoAlgo3` is the core algorithm module of **MetDNA3**, designed to annotate metabolites through a two-layer interactive networking topology (knowledge-driven and data-driven) and recursive annotation propagation algorithms. It provides a robust computational foundation for large-scale metabolomic studies.
+`MrnAnnoAlgo3` is the core algorithm module of **MetDNA3**, designed to annotate metabolites through a two-layer interactive networking topology (knowledge-driven and data-driven) and recursive annotation propagation algorithms.  
+It provides a robust computational foundation for large-scale metabolomic studies.  
 **For full functionality, please use [MetDNA3](http://metdna.zhulab.cn/).**
 
 ---
@@ -15,7 +16,7 @@
 - [Installation](#installation)
 - [Support](#support)
 - [Citation](#citation)
-- [Contributing](#contributing)
+- [Links](#links)
 - [License](#license)
 
 ---
@@ -28,7 +29,7 @@ Integrates **knowledge-driven** (biochemical pathways, metabolic reaction networ
 An efficient topology-based annotation propagation algorithm leveraging both network layers to enhance annotation coverage and accuracy.
 
 📊 **High Performance**  
-Processes a typical untargeted metabolomics dataset in just one hour—over **10× faster** than previous versions.
+Processes a typical untargeted metabolomics dataset in just one hour—over **10-fold faster** than previous versions.
 
 🔗 **Seamless Integration**  
 Designed as a core component of the MetDNA3 ecosystem.  *Note: Full MetDNA3 functionality requires additional modules.*
@@ -58,13 +59,8 @@ If you use `MrnAnnoAlgo3` or `MetDNA3` in your research, please cite: (Coming So
 
 ---
 
-## Contributing
-We welcome contributions! Please follow these steps:
-1. Fork the repository.
-2. Create a branch (`git checkout -b feature/your-feature`).
-3. Commit changes (`git commit -am 'Add some feature'`).
-4. Push to the branch (`git push origin feature/your-feature`).
-5. Open a [Pull Request](https://github.com/ptpb781209069/MrnAnnoAlgo3/pulls).
+## Links
+- **MetDNA2**:[https://github.com/ZhuMetLab/MetDNA2](https://github.com/ZhuMetLab/MetDNA2)
 
 ---
 
