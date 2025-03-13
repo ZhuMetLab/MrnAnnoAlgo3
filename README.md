@@ -7,7 +7,9 @@
 
 `MrnAnnoAlgo3` is the core algorithm module of **MetDNA3**, designed to annotate metabolites through a two-layer interactive networking topology (knowledge-driven and data-driven) and recursive annotation propagation algorithms.  
 It provides a robust computational foundation for large-scale metabolomic studies.  
-**For full functionality, please use MetDNA3: [http://metdna.zhulab.cn/](http://metdna.zhulab.cn/).**
+
+**The completed functions are provided in the [MetDNA3 webserver](http://metdna.zhulab.cn) via a free registration.**  
+The detailed tutorial was also provided in the webserver.
 
 ---
 
@@ -34,7 +36,6 @@ Processes a typical untargeted metabolomics dataset in just one hour—over **10
 🔗 **Seamless Integration**  
 Designed as a core component of the MetDNA3 ecosystem.  *Note: Full MetDNA3 functionality requires additional modules.*
 
----
 
 ## Installation
 
@@ -45,24 +46,21 @@ if (!require("devtools")) install.packages("devtools")
 devtools::install_github("ZhuMetLab/MrnAnnoAlgo3")
 ```
 
----
 
 ## Support
 - 🐛 **Bug Reports & Feature Requests**: [GitHub Issues](https://github.com/ZhuMetLab/MrnAnnoAlgo3/issues)
 - 📧 **Direct Contact**: zhanghs@sioc.ac.cn
 - 💬 **Community Forum**: [MetDNA3 Discussions](https://github.com/orgs/MetDNA3/discussions) (Coming Soon)
+- 💬 **QQ group (for Chinese users)**: [927406473](点击链接加入群聊【MetDNA交流群】：http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=zTbEobUjO3KZE-dwT24HlgJmjYs4sXj_&authKey=M3VxUewLbOBg9YpGYI6dD2X4eJl42%2FkkGIJy%2Btc539FEdEqdHdejoeRY%2BrdnWl8W&noverify=0&group_code=927406473)
 
----
 
 ## Citation
 If you use `MrnAnnoAlgo3` or `MetDNA3` in your research, please cite: (Coming Soon)
 
----
 
 ## Links
 - **MetDNA2**: [https://github.com/ZhuMetLab/MetDNA2](https://github.com/ZhuMetLab/MetDNA2)
 
----
 
 ## License
 <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/88x31.png" /></a>  
