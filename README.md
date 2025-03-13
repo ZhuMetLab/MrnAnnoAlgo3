@@ -8,8 +8,8 @@
 `MrnAnnoAlgo3` is the core algorithm module of **MetDNA3**, designed to annotate metabolites through a two-layer interactive networking topology (knowledge-driven and data-driven) and recursive annotation propagation algorithms.  
 It provides a robust computational foundation for large-scale metabolomic studies.  
 
-**The completed functions are provided in the [MetDNA3 webserver](http://metdna.zhulab.cn) via a free registration.**  
-The detailed tutorial was also provided in the webserver.
+**The completed functions are provided in the MetDNA3 webserver [(http://metdna.zhulab.cn)](http://metdna.zhulab.cn) via a free registration.**  
+The detailed tutorial was also provided in the webserver.  
 
 ---
 
@@ -51,7 +51,7 @@ devtools::install_github("ZhuMetLab/MrnAnnoAlgo3")
 - 🐛 **Bug Reports & Feature Requests**: [GitHub Issues](https://github.com/ZhuMetLab/MrnAnnoAlgo3/issues)
 - 📧 **Direct Contact**: zhanghs@sioc.ac.cn
 - 💬 **Community Forum**: [MetDNA3 Discussions](https://github.com/orgs/MetDNA3/discussions) (Coming Soon)
-- 💬 **QQ Group (for Chinese users)**: [927406473](点击链接加入群聊【MetDNA交流群】：http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=zTbEobUjO3KZE-dwT24HlgJmjYs4sXj_&authKey=M3VxUewLbOBg9YpGYI6dD2X4eJl42%2FkkGIJy%2Btc539FEdEqdHdejoeRY%2BrdnWl8W&noverify=0&group_code=927406473)
+- 💬 **QQ Group (for Chinese users)**: [927406473](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=zTbEobUjO3KZE-dwT24HlgJmjYs4sXj_&authKey=M3VxUewLbOBg9YpGYI6dD2X4eJl42%2FkkGIJy%2Btc539FEdEqdHdejoeRY%2BrdnWl8W&noverify=0&group_code=927406473)
 
 
 ## Citation
