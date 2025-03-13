@@ -7,7 +7,7 @@
 
 `MrnAnnoAlgo3` is the core algorithm module of **MetDNA3**, designed to annotate metabolites through a two-layer interactive networking topology (knowledge-driven and data-driven) and recursive annotation propagation algorithms.  
 It provides a robust computational foundation for large-scale metabolomic studies.  
-**For full functionality, please use [MetDNA3](http://metdna.zhulab.cn/).**
+**For full functionality, please use MetDNA3: [http://metdna.zhulab.cn/](http://metdna.zhulab.cn/).**
 
 ---
 
@@ -60,7 +60,7 @@ If you use `MrnAnnoAlgo3` or `MetDNA3` in your research, please cite: (Coming So
 ---
 
 ## Links
-- **MetDNA2**:[https://github.com/ZhuMetLab/MetDNA2](https://github.com/ZhuMetLab/MetDNA2)
+- **MetDNA2**: [https://github.com/ZhuMetLab/MetDNA2](https://github.com/ZhuMetLab/MetDNA2)
 
 ---
 
