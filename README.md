@@ -9,13 +9,14 @@
 It provides a robust computational foundation for large-scale metabolomic studies.  
 
 **The completed functions are provided in the MetDNA3 webserver [(http://metdna.zhulab.cn)](http://metdna.zhulab.cn) via a free registration.**  
-The detailed tutorial was also provided in the webserver.  
+The detailed tutorial was also provided in the webserver.
 
 ---
 
 ## Table of Contents
 - [Key Features](#key-features)
 - [Installation](#installation)
+- [Demo data](#demo-data)
 - [Support](#support)
 - [Citation](#citation)
 - [Links](#links)
@@ -46,6 +47,8 @@ if (!require("devtools")) install.packages("devtools")
 devtools::install_github("ZhuMetLab/MrnAnnoAlgo3")
 ```
 
+## Demo data
+Demo data is available on the MetDNA webserver [(http://metdna.zhulab.cn)](http://metdna.zhulab.cn).
 
 ## Support
 - 🐛 **Bug Reports & Feature Requests**: [GitHub Issues](https://github.com/ZhuMetLab/MrnAnnoAlgo3/issues)
@@ -55,7 +58,7 @@ devtools::install_github("ZhuMetLab/MrnAnnoAlgo3")
 
 
 ## Citation
-If you use `MrnAnnoAlgo3` or `MetDNA3` in your research, please cite: (Coming Soon)
+If you use `MetDNA3` in your research, please cite: (Coming Soon)
 
 
 ## Links
